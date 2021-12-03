@@ -11,7 +11,6 @@ indentation.
 */
 int indentation(char* s)
     require_not_null(s)
-    // todo: implement
     int spaces = 0
     char c
     while (c = *s++) != '\0' do

@@ -5,7 +5,7 @@ int main(void)
     do
         printf("%d\n", i)
         i++
-    while i < 5 && i < 100
+    while (i < 5)
     return 0
 
 
