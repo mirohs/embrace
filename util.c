@@ -169,6 +169,7 @@ StringArray* split(char* s, char sep) {
         lines = lines->next;
         free(node);
     }
+    assert("list empty", lines == NULL);
     return arr;
 }
 
