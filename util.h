@@ -11,6 +11,10 @@
 #include <stdbool.h>
 #include <string.h>
 
+/*
+A String points to some part of a C string, i.e., it does not have to end with
+'\0', but has an explicit length.
+*/
 typedef struct String String;
 struct String {
     char* s;
@@ -68,7 +72,7 @@ function.
 
 Example use of a precondition:
 @code{.c}
-    int myfunction(String s) {
+    int myfunction(char* s) {
         require_not_null(s);
         ...
     }
@@ -99,17 +103,16 @@ the beginning of a function.
 Example use of a precondition:
 @code{.c}
     int myfunction(int x) {
-        require("not too large", x < 3);
+        require("not too large", x < 100);
         ...
     }
 @endcode
 
 Example output of failed preconditions:
 
-    myfile.c, line 12: myfunction's precondition "not too large" (x < 3) violated
-    myfile.c, line 12: myfunction's precondition "sorted" (forall(int i = 0, i < n-1, i++, a[i] <= a[i+1])) violated
+    myfile.c, line 12: myfunction's precondition "not too large" (x < 100) violated
 
-@param[in] description String a description of the condition that has to be valid
+@param[in] description char* a description of the condition that has to be valid
 @param[in] condition boolean the condition to check
 */
 #define require(description, condition) \
@@ -143,7 +146,7 @@ Example output of failed postconditions:
     myfile.c, line 12: myfunction's postcondition "not negative" (result >= 0) violated
     myfile.c, line 12: myfunction's postcondition "sorted" (forall(int i = 0, i < n-1, i++, a[i] <= a[i+1])) violated
 
-@param[in] description String a description of the condition that has to be valid
+@param[in] description char* a description of the condition that has to be valid
 @param[in] condition boolean the condition to check
 */
 #define ensure(description, condition) \
@@ -174,7 +177,7 @@ Example output of failed assertions:
     myfile.c, line 12: assertion "not too large" (x < 3) violated
     myfile.c, line 12: assertion "sorted" (forall(int i = 0, i < n-1, i++, a[i] <= a[i+1])) violated
 
-@param[in] description String a description of the condition that has to be valid
+@param[in] description char* a description of the condition that has to be valid
 @param[in] condition boolean the condition to check
 */
 #define assert(description, condition) \
@@ -270,6 +273,12 @@ if (pointer == NULL) {\
     exit(EXIT_FAILURE);\
 }
 
+#define panic_if(condition, message) \
+if (condition) {\
+    fprintf(stderr, "%s:%d, %s: %s\n", __FILE__, __LINE__, __func__, message);\
+    exit(EXIT_FAILURE);\
+}
+
 #define panicf_if(condition, format, message) \
 if (condition) {\
     fprintf(stderr, "%s:%d, %s: " #format "\n", __FILE__, __LINE__, __func__, message);\
@@ -295,6 +304,7 @@ if (condition) {\
 })
 
 
+
 /** 
 Checks whether the actual int (first argument) is equal to the expected int
 (second argument).
@@ -302,14 +312,13 @@ Checks whether the actual int (first argument) is equal to the expected int
 #define test_equal_i(a, e) base_test_equal_i(__FILE__, __LINE__, a, e)
 
 /** 
-Checks whether the actual value @c a is within +/-epsilon of the expected value
-@c e.
+Checks whether the actual value @c a is equal too the expected value @c e.
 */
 bool base_test_equal_i(const char *file, int line, int a, int e);
 
 /** 
 Checks whether the actual String (first argument) is equal to the expected
-String (second argument).
+char* (second argument).
 */
 #define test_equal_s(a, e) base_test_equal_s(__FILE__, __LINE__, a, e)
 
