@@ -53,7 +53,6 @@ union IntOrFLoat
     int i
     float f
 
-
 union IntOrFloat { int i; float f; }
 
 int main(void)
