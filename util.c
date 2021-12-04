@@ -119,8 +119,10 @@ not exist or cannot be read.
 */
 String read_file(char* name) {
     require_not_null(name);
-    
-    FILE *f = fopen(name, "rt"); // removes \r from read content, only leaves \n
+
+    // Opening in text mode should remove \r and only leave \n.
+    // However, it does not do so on macOS.
+    FILE *f = fopen(name, "r"); 
     panicf_if(f == NULL, "Cannot open %s", name);
 
     fseek (f, 0, SEEK_END);
@@ -202,6 +204,107 @@ void split_test(void) {
     free(a);
 
     a = split("ab cde ", ' ');
+    test_equal_i(a->len, 3);
+    test_equal_i(a->a[0].len, 2);
+    test_equal_s(a->a[0], "ab");
+    test_equal_i(a->a[1].len, 3);
+    test_equal_s(a->a[1], "cde");
+    test_equal_i(a->a[2].len, 0);
+    test_equal_s(a->a[2], "");
+    free(a);
+}
+
+/*
+Splits the string using the given separator character. Does not motify the
+content of the argument string.
+*/
+StringArray* split_lines(char* s) {
+    require_not_null(s);
+    char* t = s;
+    StringNode* lines = NULL;
+    int line_count = 0;
+    while (*t) {
+        char c = *t;
+        if (c == '\n' || c == '\r') {
+            lines = new_string_node(make_string2(s, (int)(t - s)), lines);
+            if (c == '\r') t++; // skip carriage return, if needed
+            s = t + 1;
+            line_count++;
+        }
+        t++;
+    }
+    // last line
+    if (lines != NULL || (lines == NULL && t > s)) {
+        lines = new_string_node(make_string2(s, (int)(t - s)), lines);
+        line_count++;
+    }
+    StringArray* arr = new_string_array(line_count);
+    arr->len = line_count;
+    for (int i = line_count - 1; i >= 0; i--) {
+        assert_not_null(lines);
+        arr->a[i] = lines->str;
+        StringNode* node = lines;
+        lines = lines->next;
+        free(node);
+    }
+    assert("list empty", lines == NULL);
+    return arr;
+}
+
+void split_lines_test(void) {
+    // empty string => empty array
+    StringArray* a = split_lines("");
+    test_equal_i(a->len, 0);
+    free(a);
+
+    // separator => two empty strings
+    a = split_lines("\n");
+    test_equal_i(a->len, 2);
+    test_equal_i(a->a[0].len, 0);
+    test_equal_i(a->a[1].len, 0);
+    free(a);
+
+    // separator => two empty strings
+    a = split_lines("\r\n");
+    test_equal_i(a->len, 2);
+    test_equal_i(a->a[0].len, 0);
+    test_equal_i(a->a[1].len, 0);
+    free(a);
+
+    // a single non-empty line without line ending
+    a = split_lines("abc");
+    test_equal_i(a->len, 1);
+    test_equal_i(a->a[0].len, 3);
+    test_equal_s(a->a[0], "abc");
+    free(a);
+
+    a = split_lines("ab\ncde");
+    test_equal_i(a->len, 2);
+    test_equal_i(a->a[0].len, 2);
+    test_equal_s(a->a[0], "ab");
+    test_equal_i(a->a[1].len, 3);
+    test_equal_s(a->a[1], "cde");
+    free(a);
+
+    a = split_lines("ab\r\ncde");
+    test_equal_i(a->len, 2);
+    test_equal_i(a->a[0].len, 2);
+    test_equal_s(a->a[0], "ab");
+    test_equal_i(a->a[1].len, 3);
+    test_equal_s(a->a[1], "cde");
+    free(a);
+
+    a = split_lines("ab\ncde\n");
+    test_equal_i(a->len, 3);
+    test_equal_i(a->a[0].len, 2);
+    test_equal_s(a->a[0], "ab");
+    test_equal_i(a->a[1].len, 3);
+    test_equal_s(a->a[1], "cde");
+    test_equal_i(a->a[2].len, 0);
+    test_equal_s(a->a[2], "");
+    free(a);
+
+    a = split_lines("ab\r\ncde\r\n");
     test_equal_i(a->len, 3);
     test_equal_i(a->a[0].len, 2);
     test_equal_s(a->a[0], "ab");

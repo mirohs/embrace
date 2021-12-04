@@ -471,6 +471,7 @@ void embrace(StringArray* source_code) {
 
 int main(int argc, char* argv[]) {
     // split_test();
+    // split_lines_test();
     // indentation_test();
     // next_state_test();
     // trim_test();
@@ -483,7 +484,7 @@ int main(int argc, char* argv[]) {
     char* filename = argv[1];
     // printf("embracing %s\n", filename);
     String str = read_file(filename);
-    StringArray* source_code = split(str.s, '\n');
+    StringArray* source_code = split_lines(str.s);
     /*
     for (int i = 0; i < source_code->len; i++) {
         String line = source_code->a[i];
@@ -491,5 +492,8 @@ int main(int argc, char* argv[]) {
     }
     */
     embrace(source_code);
+
+    free(str.s);
+    free(source_code);
     return 0;
 }

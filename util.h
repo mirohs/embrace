@@ -52,6 +52,8 @@ StringArray* new_string_array(int cap);
 
 StringArray* split(char* s, char sep);
 void split_test(void);
+StringArray* split_lines(char* s);
+void split_lines_test(void);
 
 String read_file(char* name);
 
