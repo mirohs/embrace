@@ -1,6 +1,4 @@
 /*
-Compile: make line_counting
-Run: ./line_counting
 make line_counting && ./line_counting
 */
 

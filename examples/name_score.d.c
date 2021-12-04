@@ -1,13 +1,10 @@
 /*
-Compile: make name_score
-Run: ./name_score
 make name_score && ./name_score
 */
 
 #include <ctype.h>
 #include "util.h"
 
-// todo: write purpose statement
 // Returns the score for the given name. Name can only contain letters a-z 
 // (in lower case or in upper case). If it contains any other letter, the 
 // function returns -1.
