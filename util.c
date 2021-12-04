@@ -56,7 +56,7 @@ void trim_test(void) {
 }
 
 /*
-Returns true iiff str contains part.
+Returns true iff str contains part.
 */
 bool contains(String str, String part) {
     if (str.len < part.len) return false;
@@ -74,7 +74,7 @@ bool contains(String str, String part) {
 Returns the index of part in str or -1 of part does not appear in s.
 */
 int index_of(String str, String part) {
-    if (str.len < part.len) return false;
+    if (str.len < part.len) return -1;
     // must use C strings to use strstr, on stack may overflow the stack
     char s[str.len + 1];
     char t[part.len + 1];
@@ -94,7 +94,7 @@ void index_of_test(void) {
     test_equal_i(index_of(make_string("abcd"), make_string("bd")), -1);
     test_equal_i(index_of(make_string("abcd"), make_string("x")), -1);
     test_equal_i(index_of(make_string("abcd"), make_string("")), 0);
-    test_equal_i(index_of(make_string(""), make_string("a")), 0);
+    test_equal_i(index_of(make_string(""), make_string("a")), -1);
 }
 
 StringNode* new_string_node(String str, StringNode* next) {

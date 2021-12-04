@@ -475,7 +475,7 @@ int main(int argc, char* argv[]) {
     // next_state_test();
     // trim_test();
     // index_of_test();
-    // exit(1);
+    // exit(0);
     if (argc != 2) {
         printf("Usage: embrace <filename de-braced C file>\n");
         exit(1);
