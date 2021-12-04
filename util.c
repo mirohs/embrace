@@ -141,7 +141,7 @@ String read_file(char* name) {
 }
 
 /*
-Splits the string using the given separator character. Does not motify the
+Splits the string using the given separator character. Does not modify the
 content of the argument string.
 */
 StringArray* split(char* s, char sep) {
