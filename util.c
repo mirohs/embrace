@@ -191,32 +191,26 @@ void split_test(void) {
     // a single non-empty line without line ending
     a = split("abc", '\n');
     test_equal_i(a->len, 1);
-    test_equal_i(a->a[0].len, 3);
     test_equal_s(a->a[0], "abc");
     free(a);
 
     a = split("ab cde", ' ');
     test_equal_i(a->len, 2);
-    test_equal_i(a->a[0].len, 2);
     test_equal_s(a->a[0], "ab");
-    test_equal_i(a->a[1].len, 3);
     test_equal_s(a->a[1], "cde");
     free(a);
 
     a = split("ab cde ", ' ');
     test_equal_i(a->len, 3);
-    test_equal_i(a->a[0].len, 2);
     test_equal_s(a->a[0], "ab");
-    test_equal_i(a->a[1].len, 3);
     test_equal_s(a->a[1], "cde");
-    test_equal_i(a->a[2].len, 0);
     test_equal_s(a->a[2], "");
     free(a);
 }
 
 /*
-Splits the string using the given separator character. Does not motify the
-content of the argument string.
+Splits the string into lines. Does not motify the content of the argument
+string. Line separators may be "\n" or "\r\n".
 */
 StringArray* split_lines(char* s) {
     require_not_null(s);
@@ -274,43 +268,32 @@ void split_lines_test(void) {
     // a single non-empty line without line ending
     a = split_lines("abc");
     test_equal_i(a->len, 1);
-    test_equal_i(a->a[0].len, 3);
     test_equal_s(a->a[0], "abc");
     free(a);
 
     a = split_lines("ab\ncde");
     test_equal_i(a->len, 2);
-    test_equal_i(a->a[0].len, 2);
     test_equal_s(a->a[0], "ab");
-    test_equal_i(a->a[1].len, 3);
     test_equal_s(a->a[1], "cde");
     free(a);
 
     a = split_lines("ab\r\ncde");
     test_equal_i(a->len, 2);
-    test_equal_i(a->a[0].len, 2);
     test_equal_s(a->a[0], "ab");
-    test_equal_i(a->a[1].len, 3);
     test_equal_s(a->a[1], "cde");
     free(a);
 
     a = split_lines("ab\ncde\n");
     test_equal_i(a->len, 3);
-    test_equal_i(a->a[0].len, 2);
     test_equal_s(a->a[0], "ab");
-    test_equal_i(a->a[1].len, 3);
     test_equal_s(a->a[1], "cde");
-    test_equal_i(a->a[2].len, 0);
     test_equal_s(a->a[2], "");
     free(a);
 
     a = split_lines("ab\r\ncde\r\n");
     test_equal_i(a->len, 3);
-    test_equal_i(a->a[0].len, 2);
     test_equal_s(a->a[0], "ab");
-    test_equal_i(a->a[1].len, 3);
     test_equal_s(a->a[1], "cde");
-    test_equal_i(a->a[2].len, 0);
     test_equal_s(a->a[2], "");
     free(a);
 }
