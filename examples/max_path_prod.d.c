@@ -48,7 +48,6 @@ bool is_leaf(Tree* t)
 
 // Returns the maximum product of a path from the root to any leaf.
 int max_path_prod_rec(Tree* t, int max_so_far, int path_prod)
-    // todo: implement
     path_prod *= t->value
     if is_leaf(t) do
         if path_prod > max_so_far do
