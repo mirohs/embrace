@@ -209,7 +209,7 @@ void split_test(void) {
 }
 
 /*
-Splits the string into lines. Does not motify the content of the argument
+Splits the string into lines. Does not modify the content of the argument
 string. Line separators may be "\n" or "\r\n".
 */
 StringArray* split_lines(char* s) {
