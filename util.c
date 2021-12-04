@@ -140,7 +140,7 @@ String read_file(char* name) {
 
 /*
 Splits the string using the given separator character. Does not motify the
-content of the string.
+content of the argument string.
 */
 StringArray* split(char* s, char sep) {
     require_not_null(s);
@@ -149,7 +149,6 @@ StringArray* split(char* s, char sep) {
     int line_count = 0;
     while (*t) {
         if (*t == sep) {
-            int n = (int)(t - s);
             lines = new_string_node(make_string2(s, (int)(t - s)), lines);
             s = t + 1;
             line_count++;
@@ -190,25 +189,25 @@ void split_test(void) {
     a = split("abc", '\n');
     test_equal_i(a->len, 1);
     test_equal_i(a->a[0].len, 3);
-    test_equal_i(strncmp(a->a[0].s, "abc", a->a[0].len), 0);
+    test_equal_s(a->a[0], "abc");
     free(a);
 
     a = split("ab cde", ' ');
     test_equal_i(a->len, 2);
     test_equal_i(a->a[0].len, 2);
-    test_equal_i(strncmp(a->a[0].s, "ab", a->a[0].len), 0);
+    test_equal_s(a->a[0], "ab");
     test_equal_i(a->a[1].len, 3);
-    test_equal_i(strncmp(a->a[1].s, "cde", a->a[1].len), 0);
+    test_equal_s(a->a[1], "cde");
     free(a);
 
     a = split("ab cde ", ' ');
     test_equal_i(a->len, 3);
     test_equal_i(a->a[0].len, 2);
-    test_equal_i(strncmp(a->a[0].s, "ab", a->a[0].len), 0);
+    test_equal_s(a->a[0], "ab");
     test_equal_i(a->a[1].len, 3);
-    test_equal_i(strncmp(a->a[1].s, "cde", a->a[1].len), 0);
+    test_equal_s(a->a[1], "cde");
     test_equal_i(a->a[2].len, 0);
-    test_equal_i(strncmp(a->a[2].s, "", a->a[2].len), 0);
+    test_equal_s(a->a[2], "");
     free(a);
 }
 
