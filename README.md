@@ -106,7 +106,7 @@ int main(void) {
         i++; 
     }
     while ((i = getchar()) != EOF) {
-        ifi (i >= '0' && i <= '9') {
+        if (i >= '0' && i <= '9') {
             ndigit[i - '0']++; 
         }
     }
@@ -121,7 +121,7 @@ int main(void) {
 
 ### Debraced C: count_digits.d.c
 
-```c
+```
 #include <stdio.h>
 
 int main(void)
@@ -158,7 +158,7 @@ int main(void) {
 
 ### Debraced C: dowhile.d.c
 
-```c
+```
 #include <stdio.h>
 
 int main(void)
