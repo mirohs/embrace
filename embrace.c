@@ -41,6 +41,9 @@ end. if
 #include "util.h"
 #include "embrace.h"
 
+
+const int DEBUG = false;
+
 /*
 Returns the number of spaces at the beginning of s. Returns -1 if a tab
 character has been found at the beginning of s, because tab is invalid for
@@ -188,72 +191,81 @@ const String token_end = {"end.", 4};
 /*
 Counts each opening brace as +1 and each closing brace as -1.
 */
-void parse_line(/*in*/String line, /*inout*/LineInfo* li) {
+void parse_line(/*inout*/LineInfo* li) {
     require_not_null(li);
-    li->line = line;
+    String* line = li->line;
     // reset state if previos line ended in a line continuation
     if (li->state == 5) li->state = 0;
     assert("valid state", li->state == 0 || li->state == 4);
-    li->indent = indentation(li->line);
-    li->preprocessor_line = (li->state == 0 && line.s[li->indent] == '#');
-    li->end_marker = matches_token(line, li->indent, token_end);
-    li->line_comment_index = line.len;
+    li->indent = indentation(*line);
+    li->preprocessor_line = (li->state == 0 && line->s[li->indent] == '#');
+    li->end_marker = matches_token(*line, li->indent, token_end);
+    li->line_comment_index = line->len;
     // replace "if ... do" with "if (...)", same for "for" and "while"
-    int itoken = -1;
-    for (int i = li->indent; i < line.len; i++) {
-        char c = line.s[i];
-        char d = line.s[i + 1];
+    for (int i = li->indent; i < line->len; i++) {
+        char c = line->s[i];
+        char d = line->s[i + 1];
         li->state = next_state(li->state, c, d);
         if (li->state == 0) {
             if (c == '(' || c == '[' || c == '{') {
                 li->braces++;
             } else if (c == ')' || c == ']' || c == '}') {
                 li->braces--;
-            } else if (c == 'i' && d == 'f' && line.s[i + 2] == ' ') {
-                if (matches_token(line, i, token_if)) {
-                    itoken = i + 2;
+            } else if (c == 'i' && d == 'f' && line->s[i + 2] == ' ') {
+                if (matches_token(*line, i, token_if)) {
+                    li->do_open = line->s + i + 2;
+                    li->do_open_offset = -1;
                     i += 2;
                 }
-            } else if (c == 'f' && d == 'o' && line.s[i + 3] == ' ') {
-                if (matches_token(line, i, token_for)) {
-                    itoken = i + 3;
+            } else if (c == 'f' && d == 'o' && line->s[i + 3] == ' ') {
+                if (matches_token(*line, i, token_for)) {
+                    li->do_open = line->s + i + 3;
+                    li->do_open_offset = -1;
                     i += 3;
                 }
-            } else if (c == 'w' && d == 'h' && line.s[i + 5] == ' ') {
-                if (matches_token(line, i, token_while)) {
-                    itoken = i + 5;
+            } else if (c == 'w' && d == 'h' && line->s[i + 5] == ' ') {
+                if (matches_token(*line, i, token_while)) {
+                    li->do_open = line->s + i + 5;
+                    li->do_open_offset = -1;
                     i += 5;
                 }
-            } else if (c == 'd' && d == 'o' && itoken >= 0) {
-                if (matches_token(line, i, token_do)) {
-                    line.s[itoken] = '(';
-                    line.s[i] = ')';
-                    line.s[i + 1] = ' ';
-                    itoken = -1;
+            } else if (c == 'd' && d == 'o' && li->do_open != NULL) {
+                if (matches_token(*line, i, token_do)) {
+                    *li->do_open = '(';
+                    li->do_open = NULL;
+                    li->do_open_offset = -1;
+                    line->s[i] = ')';
+                    line->s[i + 1] = ' ';
                 }
             }
         } else if (li->state == 3) {
-            //printf("[/%d/%s]", i, line.s);
+            //printf("[/%d/%s]", i, line->s);
             li->line_comment_index = i;
             // strip line comment
-            li->line.len = i;
-            line.len = i;
+            line->len = i;
             // reset state for line comment (since we are at end of line)
             li->state = 0;
             break;
         }
     }
+    if (li->state == 0) {
+        *line = trim_right(*line);
+    }
+    if (li->state == 5 && li->do_open != NULL && li->do_open_offset == -1) {
+        li->do_open_offset = li->do_open - line->s;
+        li->do_open = NULL;
+    }
 }
 
-// Prints n spaces (n >= 0).
-void print_spaces(int n) {
+// Append n spaces (n >= 0) to str.
+bool append_spaces(String* str, int n) {
+    require_not_null(str);
     assert("not negative", n >= 0);
-    char spaces[n + 1];
-    for (int i = 0; i < n; i++) {
-        spaces[i] = ' ';
-    }
-    spaces[n] = '\0';
-    printf("%s", spaces);
+    int new_len = str->len + n;
+    if (new_len > str->cap) return false;
+    memset(str->s + str->len, ' ', n);
+    str->len = new_len;
+    return true;
 }
 
 // Pushes a copy of value onto stack.
@@ -294,14 +306,36 @@ bool is_empty(/*in*/LineInfo* stack) {
     return stack == NULL;
 }
 
-// Prints s with indent leading spaces.
-void println_indented(char* s, int indent) {
-    print_spaces(indent);
-    printf("%s\n", s);
-}
+#define APPEND_EMPTY_LINES \
+    while (empty_lines > 0) { \
+        append_spaces(&output, li.indent); \
+        append_cstring(&output, ";\n"); \
+        empty_lines--; \
+    }
 
-#define PRINT_EMPTY_LINES \
-    while (empty_lines > 0) { println_indented(";", li.indent); empty_lines--; }
+
+#define PATCH_DO_OPEN \
+    if (li.do_open_offset >= 0 && li.do_open == NULL) \
+        li.do_open = output.s + output.len + li.do_open_offset;
+
+/*
+Adds ia semicolon to the previous line if this line is on same or lower
+indentation level and if the previous line is not a preprocessor line or a
+comment.
+Treat file end as line at level 0.
+Take care of semicolons after struct and union definitions as well as array
+literals.
+*/
+void append_semicolon(String* str, LineInfo* li) {
+    require_not_null(str);
+    require_not_null(li);
+    if (li->state == 0 && !li->preprocessor_line && li->line != NULL) {
+        int n = li->line->len;
+        if (n > 0 && li->line->s[n - 1] != ';') {
+            append_char(str, ';');
+        }
+    }
+}
 
 /*
 Reintroduces braces {...} based on indentation of the de-braced source code. It
@@ -329,144 +363,133 @@ Additionally the algorithm ensures that line continuations inside brackets
 (...), [...], and {...} do not trigger re-bracing. Moreover, string and
 character literals and line and block comments are ignored.
 */
-/*
-int states[8][8] = { // rows: states, columns: inputs
-    //"  '  \  // /+ +/ \<eos> other
-    //0  1  2  3  4  5  6  7
-    { 1, 6, 0, 3, 4, 0, 5, 0 }, // 0 start
-    { 0, 1, 2, 1, 1, 1, 1, 1 }, // 1 in_string
-    { 1, 1, 1, 1, 1, 1, 1, 1 }, // 2 string_escape
-    { 3, 3, 3, 3, 3, 3, 3, 3 }, // 3 line_comment
-    { 4, 4, 4, 4, 4, 0, 4, 4 }, // 4 block_comment
-    { 5, 5, 5, 5, 5, 5, 5, 5 }, // 5 line_continuation
-    { 6, 0, 7, 6, 6, 6, 6, 6 }, // 6 in_char
-    { 6, 6, 6, 6, 6, 6, 6, 6 }, // 7 char_escape
-};
-typedef struct {
-    int length;
-    int indent;
-    int state;
-    int line_comment_index;
-    int braces;
-    bool preprocessor_line;
-} LineInfo;
-*/
-
-// add semicolon to prev line if this line is on same or lower indentation level
-//     and if prev line is not a preprocessor line or a comment 
-// treat file end as line at level 0
-// take care of semicolons after struct and union definitions as well as array literals
-void print_semicolon(LineInfo* li) {
-    if (li->state == 0 && !li->preprocessor_line && 
-        li->line.len > 0 && li->line.s[li->line.len - 1] != ';') 
-    {
-        printf(";");
+void check_errors(LineInfo* li, char* filename, int line_number, int current_indent) {
+    if (li->indent < 0) {
+        fprintf(stderr, "\n%s:%d: Tab used for indentation. De-braced C-Code "
+               "must only use spaces for indentation.\n", filename, line_number);
+        exit(1);
+    }
+    if (li->braces < 0) {
+        fprintf(stderr, "\n%s:%d: More closing braces than opening braces.\n", 
+                filename, line_number);
+        exit(1);
+    }
+    if (li->state == 1 || li->state == 2 || li->state == 6 || li->state == 7) {
+        fprintf(stderr, "\nstderr, %s:%d: Unterminated string or character literal.\n", 
+                filename, line_number);
+        exit(1);
+    }
+    if (li->end_marker && li->indent >= current_indent) {
+        fprintf(stderr, "\n%s:%d: Wrong indentation of end marker.\n", 
+                filename, line_number);
+        exit(1);
     }
 }
 
-void embrace(StringArray* source_code) {
-    require_not_null(source_code);
-    LineInfo* indent_stack = NULL;
-    // The number of empty (or all-whitespace) lines. These are emitted once the
-    // next indentation level is clear.
-    int empty_lines = 0;
-    LineInfo li = {{NULL, 0}, 0, 0, 0, 0, false, false};
-    LineInfo prev_li = li;
-    // push(indent_stack, &line_info);
+String embrace(char* filename, String source_code) {
+    require_not_null(filename);
+    StringArray* source_code_lines = split_lines(source_code.s);
+    String output = new_string(2 * source_code.len);
     int current_indent = 0;
+    LineInfo* indent_stack = NULL;
+    LineInfo li = {NULL, 0, 0, 0, 0, false, false, -1, NULL, NULL};
+    LineInfo prev_li = li;
+    int empty_lines = 0;
     bool is_first_time = true;
-    for (int i = 1; i <= source_code->len; i++) {
-        String line = source_code->a[i - 1];
-        prev_li = li;
-        parse_line(line, &li);
-        line = li.line;
-        // printf("%d(i=%d, b=%d, s=%d): %s\n", i, line_indent, braces, state, line);
-        if (li.indent < 0) {
-            printf("\nLine %d: Tab used for indentation. De-braced C-Code "
-                   "must only use spaces for indentation.\n", i);
-            exit(1);
-        }
-        if (li.braces < 0) {
-            printf("\nLine %d: More closing braces than opening braces.\n", i);
-            exit(1);
-        }
-        if (li.state == 1 || li.state == 2 || li.state == 6 || li.state == 7) {
-            printf("\nLine %d: Unterminated string or character literal.\n", i);
-            exit(1);
-        }
-        if (li.end_marker && li.indent >= current_indent) {
-            printf("\nLine %d: Wrong indentation of end marker.\n", i);
-            exit(1);
-        }
-        if (li.line.len == 0 || li.line.len == li.indent) {
+    for (int line_number = 1; line_number <= source_code_lines->len; line_number++) {
+        li.line = &source_code_lines->a[line_number - 1];
+        parse_line(&li);
+        check_errors(&li, filename, line_number, current_indent);
+        if (DEBUG) printf("i=%d, ind=%d, b=%d, s=%d, pp=%d, do=%p: ", line_number, li.indent, li.braces, li.state, li.preprocessor_line, li.do_open);
+        if (DEBUG) println_string(*li.line);
+
+        if (li.line->len == 0 || li.line->len == li.indent) {
+            if (DEBUG) printf("embrace: empty\n");
+            // Count the number of empty (or all-whitespace) lines. These are 
+            // emitted once the next indentation level is clear.
             empty_lines++;
             // preserve previous line as this is an empty line
             li = prev_li;
         } else if (prev_li.braces > 0 || prev_li.state != 0 || prev_li.preprocessor_line) {
-            printf("\n");
-            PRINT_EMPTY_LINES
-            print_string(line);
+            if (DEBUG) printf("embrace: prev special\n");
+            append_char(&output, '\n');
+            APPEND_EMPTY_LINES
+            PATCH_DO_OPEN
+            append_string(&output, *li.line);
         } else if (li.indent > current_indent) {
-            printf(" {\n");
-            PRINT_EMPTY_LINES
-            print_string(line);
+            if (DEBUG) printf("embrace: larger indent\n");
+            append_cstring(&output, " {\n");
+            APPEND_EMPTY_LINES
+            PATCH_DO_OPEN
+            append_string(&output, *li.line);
             push(&indent_stack, &prev_li);
             //printf("(pushed: %d, %s)", prev_li.indent, prev_li.line);
             current_indent = li.indent;
         } else if (li.indent < current_indent) {
-            print_semicolon(&prev_li);
-            printf(" ");
+            if (DEBUG) printf("embrace: smaller indent\n");
+            append_semicolon(&output, &prev_li);
+            append_char(&output, ' ');
             while (!is_empty(indent_stack) && top_indent(indent_stack) != li.indent) {
-                printf("}");
+                append_char(&output, '}');
                 pop(&indent_stack);
             }
             if (is_empty(indent_stack)) {
-                fprintf(stderr, "\nLine %d: No matching indentation level found.\n", i);
+                fprintf(stderr, "\n%s:%d: No matching indentation level found.\n", filename, line_number);
                 exit(1);
             }
             assert("matching indentation level found", top_indent(indent_stack) == li.indent);
             LineInfo match = pop(&indent_stack);
             // printf("[match: %.*s]", match.line.len, match.line.s);
             if (li.end_marker) {
-                printf("\n"); 
-                PRINT_EMPTY_LINES
-                print_spaces(li.indent); printf("}");
+                append_char(&output, '\n');
+                APPEND_EMPTY_LINES
+                append_spaces(&output, li.indent);
+                append_char(&output, '}');
                 int offset = li.indent + token_end.len;
-                String marker = make_string2(line.s + offset, line.len - offset);
+                String marker = make_string2(li.line->s + offset, li.line->len - offset);
                 marker = trim(marker);
                 // printf("[marker: %.*s]", marker.len, marker.s);
-                if (!contains(match.line, marker)) {
-                    fprintf(stderr, "\nLine %d: End marker '%.*s' does not match.\n", i, marker.len, marker.s);
+                if (!contains(*match.line, marker)) {
+                    fprintf(stderr, "\n%s:%d: End marker '%.*s' does not match.\n", 
+                            filename, line_number, marker.len, marker.s);
                     exit(1);
                 }
             } else {
-                printf("}\n");
-                PRINT_EMPTY_LINES
-                print_string(line);
+                append_cstring(&output, "}\n");
+                APPEND_EMPTY_LINES
+                PATCH_DO_OPEN
+                append_string(&output, *li.line);
             }
             current_indent = li.indent;
         } else {
-            print_semicolon(&prev_li);
+            if (DEBUG) printf("embrace: else: ");
+            if (DEBUG) println_string(*li.line);
+            append_semicolon(&output, &prev_li);
             if (is_first_time) {
                 is_first_time = false;
             } else {
-                printf("\n");
+                append_char(&output, '\n');
             }
-            PRINT_EMPTY_LINES
-            print_string(line);
-        }
-    }
+            APPEND_EMPTY_LINES
+            if (DEBUG) println_string(*li.line);
+            PATCH_DO_OPEN
+            append_string(&output, *li.line);
+            if (DEBUG) printf("li.line->len: %d output->len: %d\n", li.line->len, output.len);
+        } // if
+        prev_li = li;
+    } // for
 
     // at end of file need to close any open blocks
-    print_semicolon(&prev_li);
-    printf(" ");
+    append_semicolon(&output, &prev_li);
+    append_char(&output, ' ');
     while (!is_empty(indent_stack)) {
         pop(&indent_stack);
-        printf("}");
+        append_char(&output, '}');
     }
-    printf("\n");
-
-    //l_free(indent_stack);
+    append_char(&output, '\n');
+    assert("indent stack empty", indent_stack == NULL);
+    free(source_code_lines);
+    return output;
 }
 
 int main(int argc, char* argv[]) {
@@ -475,25 +498,24 @@ int main(int argc, char* argv[]) {
     // indentation_test();
     // next_state_test();
     // trim_test();
+    // trim_left_test();
+    // trim_right_test();
     // index_of_test();
+    // append_test();
     // exit(0);
+
     if (argc != 2) {
         printf("Usage: embrace <filename de-braced C file>\n");
         exit(1);
     }
     char* filename = argv[1];
     // printf("embracing %s\n", filename);
-    String str = read_file(filename);
-    StringArray* source_code = split_lines(str.s);
-    /*
-    for (int i = 0; i < source_code->len; i++) {
-        String line = source_code->a[i];
-        printf("%3d: %.*s\n", line.len, line.len, line.s);
-    }
-    */
-    embrace(source_code);
 
-    free(str.s);
-    free(source_code);
+    String source_code = read_file(filename);
+    String embraced_source_code = embrace(filename, source_code);
+    print_string(embraced_source_code);
+
+    free(source_code.s);
+    free(embraced_source_code.s);
     return 0;
 }

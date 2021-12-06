@@ -18,13 +18,15 @@
 
 typedef struct LineInfo LineInfo;
 struct LineInfo {
-    String line;
+    String* line;
     int indent;
     int state;
     int line_comment_index;
     int braces;
     bool preprocessor_line;
     bool end_marker;
+    int do_open_offset;
+    char* do_open;
     LineInfo* next;
 };
 
