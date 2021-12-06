@@ -19,16 +19,28 @@ typedef struct String String;
 struct String {
     char* s;
     int len;
+    int cap;
 };
 
 String make_string(char* s);
-String make_string2(char* s, int n);
+String make_string2(char* s, int len);
+String make_string3(char* s, int len, int cap);
+String new_string(int cap);
+
+bool append_string(String* str, String t);
+bool append_cstring(String* str, char* t);
+bool append_char(String* str, char c);
+void append_test(void);
 
 void print_string(String str);
 void println_string(String str);
 
 String trim(String str);
+String trim_left(String str);
+String trim_right(String str);
 void trim_test(void);
+void trim_left_test(void);
+void trim_right_test(void);
 bool contains(String str, String part);
 int index_of(String str, String part);
 void index_of_test(void);

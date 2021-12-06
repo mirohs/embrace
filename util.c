@@ -10,13 +10,79 @@
 
 String make_string(char* s) {
     require_not_null(s);
-    return (String) {s, strlen(s)};
+    int len = strlen(s);
+    return (String) {s, len, len};
 }
 
-String make_string2(char* s, int n) {
+String make_string2(char* s, int len) {
     require_not_null(s);
-    require("not negative", n >= 0);
-    return (String) {s, n};
+    require("length not negative", len >= 0);
+    return (String) {s, len, len};
+}
+
+String make_string3(char* s, int len, int cap) {
+    require_not_null(s);
+    require("length not negative", len >= 0);
+    require("capacity not negative", cap >= 0);
+    require("length does not exceed capacity", len <= cap);
+    return (String) {s, len, cap};
+}
+
+String new_string(int cap) {
+    require("capacity not negative", cap >= 0);
+    return (String) {xmalloc(cap), 0, cap};
+}
+
+bool append_string(String* str, String t) {
+    require_not_null(str);
+    int n = str->len + t.len;
+    panic_if(n > str->cap, "append_string overflow");
+    if (n > str->cap) return false;
+    memcpy(str->s + str->len, t.s, t.len);
+    str->len = n;
+    return true;
+}
+
+bool append_cstring(String* str, char* t) {
+    require_not_null(str);
+    require_not_null(t);
+    int t_len = strlen(t);
+    int n = str->len + t_len;
+    panic_if(n > str->cap, "append_cstring overflow");
+    if (n > str->cap) return false;
+    memcpy(str->s + str->len, t, t_len);
+    str->len = n;
+    return true;
+}
+
+bool append_char(String* str, char c) {
+    require_not_null(str);
+    panic_if(str->len >= str->cap, "append_char overflow");
+    if (str->len >= str->cap) return false;
+    str->s[str->len] = c;
+    str->len++;
+    return true;
+}
+
+void append_test(void) {
+    String s = new_string(100);
+    test_equal_s(s, "");
+    append_char(&s, 'x');
+    test_equal_s(s, "x");
+    append_char(&s, 'y');
+    test_equal_s(s, "xy");
+    append_cstring(&s, "abc");
+    test_equal_s(s, "xyabc");
+    append_string(&s, make_string("hello"));
+    test_equal_s(s, "xyabchello");
+    test_equal_i(s.len, 10);
+    test_equal_i(s.cap, 100);
+    free(s.s);
+
+    s = make_string("abc");
+    bool b = append_char(&s, 'x');
+    test_equal_s(s, "abc");
+    test_equal_i(b, 0); // false
 }
 
 void print_string(String str) {
@@ -53,6 +119,58 @@ void trim_test(void) {
     test_equal_s(trim(make_string("abc")), "abc");
     test_equal_s(trim(make_string("a b c")), "a b c");
     test_equal_s(trim(make_string("   a b c ")), "a b c");
+}
+
+/*
+Removes spaces and tabs from the beginning of str. The underlying content is not
+modified, but the String is appropriately shifted and the length adapted.
+*/
+String trim_left(String str) {
+    int left = 0, right = str.len - 1;
+    for (; left < str.len && (str.s[left] == ' ' || str.s[left] == '\t' ); left++);
+    if (left > right) return (String){"", 0};
+    return (String){str.s + left, right - left + 1};
+}
+
+void trim_left_test(void) {
+    test_equal_s(trim_left(make_string("")), "");
+    test_equal_s(trim_left(make_string(" ")), "");
+    test_equal_s(trim_left(make_string("  \t\t \t  ")), "");
+    test_equal_s(trim_left(make_string("a")), "a");
+    test_equal_s(trim_left(make_string("a ")), "a ");
+    test_equal_s(trim_left(make_string(" a")), "a");
+    test_equal_s(trim_left(make_string("a \t")), "a \t");
+    test_equal_s(trim_left(make_string("\t a")), "a");
+    test_equal_s(trim_left(make_string("\t a \t")), "a \t");
+    test_equal_s(trim_left(make_string("abc")), "abc");
+    test_equal_s(trim_left(make_string("a b c")), "a b c");
+    test_equal_s(trim_left(make_string("   a b c ")), "a b c ");
+}
+
+/*
+Removes spaces and tabs from the end of str. The underlying content is not
+modified, but the String is appropriately shifted and the length adapted.
+*/
+String trim_right(String str) {
+    int left = 0, right = str.len - 1;
+    for (; right >= left && (str.s[right] == ' ' || str.s[right] == '\t' ); right--);
+    if (left > right) return (String){"", 0};
+    return (String){str.s + left, right - left + 1};
+}
+
+void trim_right_test(void) {
+    test_equal_s(trim_right(make_string("")), "");
+    test_equal_s(trim_right(make_string(" ")), "");
+    test_equal_s(trim_right(make_string("  \t\t \t  ")), "");
+    test_equal_s(trim_right(make_string("a")), "a");
+    test_equal_s(trim_right(make_string("a ")), "a");
+    test_equal_s(trim_right(make_string(" a")), " a");
+    test_equal_s(trim_right(make_string("a \t")), "a");
+    test_equal_s(trim_right(make_string("\t a")), "\t a");
+    test_equal_s(trim_right(make_string("\t a \t")), "\t a");
+    test_equal_s(trim_right(make_string("abc")), "abc");
+    test_equal_s(trim_right(make_string("a b c")), "a b c");
+    test_equal_s(trim_right(make_string("   a b c ")), "   a b c");
 }
 
 /*
