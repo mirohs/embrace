@@ -256,7 +256,7 @@ void parse_line(/*inout*/LineInfo* li) {
 // Append n spaces (n >= 0) to str.
 bool append_spaces(String* str, int n) {
     require_not_null(str);
-    assert("not negative", n >= 0);
+    require("not negative", n >= 0);
     int new_len = str->len + n;
     if (new_len > str->cap) return false;
     memset(str->s + str->len, ' ', n);
