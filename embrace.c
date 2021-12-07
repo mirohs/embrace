@@ -337,9 +337,32 @@ void append_semicolon(String* str, LineInfo* li) {
     }
 }
 
+void check_errors(LineInfo* li, char* filename, int line_number, int current_indent) {
+    if (li->indent < 0) {
+        fprintf(stderr, "%s:%d: Tab used for indentation. De-braced C-Code "
+               "must only use spaces for indentation.\n", filename, line_number);
+        exit(1);
+    }
+    if (li->braces < 0) {
+        fprintf(stderr, "%s:%d: More closing braces than opening braces.\n", 
+                filename, line_number);
+        exit(1);
+    }
+    if (li->state == 1 || li->state == 2 || li->state == 6 || li->state == 7) {
+        fprintf(stderr, "stderr, %s:%d: Unterminated string or character literal.\n", 
+                filename, line_number);
+        exit(1);
+    }
+    if (li->end_marker && li->indent >= current_indent) {
+        fprintf(stderr, "%s:%d: Wrong indentation of end marker.\n", 
+                filename, line_number);
+        exit(1);
+    }
+}
+
 /*
 Reintroduces braces {...} based on indentation of the de-braced source code. It
-uses the following algorithm:
+uses (roughly) the following algorithm:
     make indentation stack
     push 0
     for each line:
@@ -363,29 +386,6 @@ Additionally the algorithm ensures that line continuations inside brackets
 (...), [...], and {...} do not trigger re-bracing. Moreover, string and
 character literals and line and block comments are ignored.
 */
-void check_errors(LineInfo* li, char* filename, int line_number, int current_indent) {
-    if (li->indent < 0) {
-        fprintf(stderr, "\n%s:%d: Tab used for indentation. De-braced C-Code "
-               "must only use spaces for indentation.\n", filename, line_number);
-        exit(1);
-    }
-    if (li->braces < 0) {
-        fprintf(stderr, "\n%s:%d: More closing braces than opening braces.\n", 
-                filename, line_number);
-        exit(1);
-    }
-    if (li->state == 1 || li->state == 2 || li->state == 6 || li->state == 7) {
-        fprintf(stderr, "\nstderr, %s:%d: Unterminated string or character literal.\n", 
-                filename, line_number);
-        exit(1);
-    }
-    if (li->end_marker && li->indent >= current_indent) {
-        fprintf(stderr, "\n%s:%d: Wrong indentation of end marker.\n", 
-                filename, line_number);
-        exit(1);
-    }
-}
-
 String embrace(char* filename, String source_code) {
     require_not_null(filename);
     StringArray* source_code_lines = split_lines(source_code.s);
@@ -395,7 +395,6 @@ String embrace(char* filename, String source_code) {
     LineInfo li = {NULL, 0, 0, 0, 0, false, false, -1, NULL, NULL};
     LineInfo prev_li = li;
     int empty_lines = 0;
-    bool is_first_time = true;
     for (int line_number = 1; line_number <= source_code_lines->len; line_number++) {
         li.line = &source_code_lines->a[line_number - 1];
         parse_line(&li);
@@ -430,11 +429,11 @@ String embrace(char* filename, String source_code) {
             append_semicolon(&output, &prev_li);
             append_char(&output, ' ');
             while (!is_empty(indent_stack) && top_indent(indent_stack) != li.indent) {
-                append_char(&output, '}');
                 pop(&indent_stack);
+                append_char(&output, '}');
             }
             if (is_empty(indent_stack)) {
-                fprintf(stderr, "\n%s:%d: No matching indentation level found.\n", filename, line_number);
+                fprintf(stderr, "%s:%d: No matching indentation level found.\n", filename, line_number);
                 exit(1);
             }
             assert("matching indentation level found", top_indent(indent_stack) == li.indent);
@@ -450,7 +449,7 @@ String embrace(char* filename, String source_code) {
                 marker = trim(marker);
                 // printf("[marker: %.*s]", marker.len, marker.s);
                 if (!contains(*match.line, marker)) {
-                    fprintf(stderr, "\n%s:%d: End marker '%.*s' does not match.\n", 
+                    fprintf(stderr, "%s:%d: End marker '%.*s' does not match.\n", 
                             filename, line_number, marker.len, marker.s);
                     exit(1);
                 }
@@ -463,16 +462,13 @@ String embrace(char* filename, String source_code) {
             current_indent = li.indent;
         } else {
             if (DEBUG) printf("embrace: else: ");
-            if (DEBUG) println_string(*li.line);
             append_semicolon(&output, &prev_li);
-            if (is_first_time) {
-                is_first_time = false;
-            } else {
+            if (output.len > 0) {
                 append_char(&output, '\n');
             }
             APPEND_EMPTY_LINES
-            if (DEBUG) println_string(*li.line);
             PATCH_DO_OPEN
+            if (DEBUG) println_string(*li.line);
             append_string(&output, *li.line);
             if (DEBUG) printf("li.line->len: %d output->len: %d\n", li.line->len, output.len);
         } // if
