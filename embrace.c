@@ -391,7 +391,7 @@ String embrace(char* filename, String source_code) {
     String output = new_string(2 * source_code.len);
     int current_indent = 0;
     LineInfo* indent_stack = NULL;
-    LineInfo li = {NULL, 0, 0, 0, 0, false, false, -1, NULL, NULL};
+    LineInfo li = {NULL, 0, 0, 0, 0, false, false, false, NULL, NULL};
     LineInfo prev_li = li;
     int empty_lines = 0;
     for (int line_number = 1; line_number <= source_code_lines->len; line_number++) {
