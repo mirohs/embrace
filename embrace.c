@@ -214,26 +214,26 @@ void parse_line(/*inout*/LineInfo* li) {
             } else if (c == 'i' && d == 'f' && line->s[i + 2] == ' ') {
                 if (matches_token(*line, i, token_if)) {
                     li->do_open = line->s + i + 2;
-                    li->do_open_offset = -1;
+                    li->do_open_in_output = false;
                     i += 2;
                 }
             } else if (c == 'f' && d == 'o' && line->s[i + 3] == ' ') {
                 if (matches_token(*line, i, token_for)) {
                     li->do_open = line->s + i + 3;
-                    li->do_open_offset = -1;
+                    li->do_open_in_output = false;
                     i += 3;
                 }
             } else if (c == 'w' && d == 'h' && line->s[i + 5] == ' ') {
                 if (matches_token(*line, i, token_while)) {
                     li->do_open = line->s + i + 5;
-                    li->do_open_offset = -1;
+                    li->do_open_in_output = false;
                     i += 5;
                 }
             } else if (c == 'd' && d == 'o' && li->do_open != NULL) {
                 if (matches_token(*line, i, token_do)) {
                     *li->do_open = '(';
                     li->do_open = NULL;
-                    li->do_open_offset = -1;
+                    li->do_open_in_output = false;
                     line->s[i] = ')';
                     line->s[i + 1] = ' ';
                 }
@@ -250,10 +250,6 @@ void parse_line(/*inout*/LineInfo* li) {
     }
     if (li->state == 0) {
         *line = trim_right(*line);
-    }
-    if (li->state == 5 && li->do_open != NULL && li->do_open_offset == -1) {
-        li->do_open_offset = li->do_open - line->s;
-        li->do_open = NULL;
     }
 }
 
@@ -313,10 +309,13 @@ bool is_empty(/*in*/LineInfo* stack) {
         empty_lines--; \
     }
 
-
 #define PATCH_DO_OPEN \
-    if (li.do_open_offset >= 0 && li.do_open == NULL) \
-        li.do_open = output.s + output.len + li.do_open_offset;
+    if (li.state == 5 && li.do_open != NULL && !li.do_open_in_output) { \
+        int offset = li.do_open - li.line->s; \
+        assert("valid offset", 0 <= offset < li.line->len); \
+        li.do_open = output.s + output.len + offset; \
+        li.do_open_in_output = true; \
+    }
 
 /*
 Adds ia semicolon to the previous line if this line is on same or lower
