@@ -185,6 +185,7 @@ bool matches_token(String line, int i, String token) {
 const String token_if = {"if", 2};
 const String token_for = {"for", 3 };
 const String token_while = {"while", 5};
+const String token_switch = {"switch", 6};
 const String token_do = {"do", 2};
 const String token_end = {"end.", 4};
 
@@ -228,6 +229,12 @@ void parse_line(/*inout*/LineInfo* li) {
                     li->do_open = line->s + i + 5;
                     li->do_open_in_output = false;
                     i += 5;
+                }
+            } else if (c == 's' && d == 'w' && line->s[i + 6] == ' ') {
+                if (matches_token(*line, i, token_switch)) {
+                    li->do_open = line->s + i + 6;
+                    li->do_open_in_output = false;
+                    i += 6;
                 }
             } else if (c == 'd' && d == 'o' && li->do_open != NULL) {
                 if (matches_token(*line, i, token_do)) {

@@ -20,7 +20,7 @@ from the input.
 int next_state(int state, char c, char d)
     require("valid state", 0 <= state && state < 8)
     int input = 0;
-    switch (c)
+    switch c do 
         case '"': input = 0; break
         case '\'': input = 1; break
         case '\\': 
