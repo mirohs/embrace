@@ -305,7 +305,8 @@ bool is_empty(/*in*/LineInfo* stack) {
 #define APPEND_EMPTY_LINES \
     while (empty_lines > 0) { \
         append_spaces(&output, li.indent); \
-        append_cstring(&output, ";\n"); \
+        char* s = (prev_li.braces == 0) ? ";\n" : "\n"; \
+        append_cstring(&output, s); \
         empty_lines--; \
     }
 
