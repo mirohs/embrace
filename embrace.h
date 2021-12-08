@@ -25,6 +25,8 @@ struct LineInfo {
     int braces;
     bool preprocessor_line;
     bool end_marker;
+    bool struct_or_union_token;
+    bool typedef_token;
     bool do_open_in_output;
     char* do_open;
     LineInfo* next;

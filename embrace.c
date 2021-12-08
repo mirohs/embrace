@@ -205,6 +205,8 @@ void parse_line(/*inout*/LineInfo* li) {
     li->preprocessor_line = (li->state == 0 && line->s[li->indent] == '#');
     li->end_marker = matches_token(*line, li->indent, token_end);
     li->line_comment_index = line->len;
+    li->struct_or_union_token = false;
+    li->typedef_token = false;
     // replace "if ... do" with "if (...)", same for "for" and "while"
     for (int i = li->indent; i < line->len; i++) {
         char c = line->s[i];
@@ -239,6 +241,21 @@ void parse_line(/*inout*/LineInfo* li) {
                     li->do_open_in_output = false;
                     i += 6;
                 }
+            } else if (c == 's' && d == 't') {
+                if (matches_token(*line, i, token_struct)) {
+                    li->struct_or_union_token = true;
+                    i += 5;
+                }
+            } else if (c == 'u' && d == 'n') {
+                if (matches_token(*line, i, token_union)) {
+                    li->struct_or_union_token = true;
+                    i += 4;
+                }
+            } else if (c == 't' && d == 'y') {
+                if (matches_token(*line, i, token_typedef)) {
+                    li->typedef_token = true;
+                    i += 6;
+                }
             } else if (c == 'd' && d == 'o' && li->do_open != NULL) {
                 if (matches_token(*line, i, token_do)) {
                     *li->do_open = '(';
@@ -257,7 +274,7 @@ void parse_line(/*inout*/LineInfo* li) {
             li->state = 0;
             break;
         }
-    }
+    } // for
     if (li->state == 0) {
         *line = trim_right(*line);
     }
@@ -401,7 +418,7 @@ String embrace(char* filename, String source_code) {
     String output = new_string(2 * source_code.len);
     int current_indent = 0;
     LineInfo* indent_stack = NULL;
-    LineInfo li = {NULL, 0, 0, 0, 0, false, false, false, NULL, NULL};
+    LineInfo li = {NULL, 0, 0, 0, 0, false, false, false, false, false, NULL, NULL};
     LineInfo prev_li = li;
     int empty_lines = 0;
     for (int line_number = 1; line_number <= source_code_lines->len; line_number++) {
@@ -464,11 +481,7 @@ String embrace(char* filename, String source_code) {
                 }
             } else {
                 append_char(&output, '}');
-                String match_line = *match.line;
-                // todo: struct, union, typedef should be identified in parse_line
-                if ((contains(match_line, token_struct) 
-                        || contains(match_line, token_union))
-                        && !contains(match_line, token_typedef)) {
+                if (match.struct_or_union_token && !match.typedef_token) {
                     append_char(&output, ';');
                 }
                 append_char(&output, '\n');
