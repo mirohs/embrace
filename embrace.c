@@ -188,6 +188,9 @@ const String token_while = {"while", 5};
 const String token_switch = {"switch", 6};
 const String token_do = {"do", 2};
 const String token_end = {"end.", 4};
+const String token_struct = {"struct", 6};
+const String token_union = {"union", 5};
+const String token_typedef = {"typedef", 7};
 
 /*
 Counts each opening brace as +1 and each closing brace as -1.
@@ -312,8 +315,7 @@ bool is_empty(/*in*/LineInfo* stack) {
 #define APPEND_EMPTY_LINES \
     while (empty_lines > 0) { \
         append_spaces(&output, li.indent); \
-        char* s = (prev_li.braces == 0) ? ";\n" : "\n"; \
-        append_cstring(&output, s); \
+        append_char(&output, '\n'); \
         empty_lines--; \
     }
 
@@ -333,12 +335,12 @@ Treat file end as line at level 0.
 Take care of semicolons after struct and union definitions as well as array
 literals.
 */
-void append_semicolon(String* str, LineInfo* li) {
+void append_semicolon(String* str, LineInfo* prev_li) {
     require_not_null(str);
-    require_not_null(li);
-    if (li->state == 0 && !li->preprocessor_line && li->line != NULL) {
-        int n = li->line->len;
-        if (n > 0 && li->line->s[n - 1] != ';') {
+    require_not_null(prev_li);
+    if (prev_li->state == 0 && !prev_li->preprocessor_line && prev_li->line != NULL) {
+        int n = prev_li->line->len;
+        if (n > 0 && prev_li->line->s[n - 1] != ';') {
             append_char(str, ';');
         }
     }
@@ -461,7 +463,15 @@ String embrace(char* filename, String source_code) {
                     exit(1);
                 }
             } else {
-                append_cstring(&output, "}\n");
+                append_char(&output, '}');
+                String match_line = *match.line;
+                // todo: struct, union, typedef should be identified in parse_line
+                if ((contains(match_line, token_struct) 
+                        || contains(match_line, token_union))
+                        && !contains(match_line, token_typedef)) {
+                    append_char(&output, ';');
+                }
+                append_char(&output, '\n');
                 APPEND_EMPTY_LINES
                 PATCH_DO_OPEN
                 append_string(&output, *li.line);
