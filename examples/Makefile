@@ -1,6 +1,11 @@
 CFLAGS = -std=c99 -Wall -Wno-unused-function -Wno-unused-variable -Werror -Wpointer-arith -Wfatal-errors
 DEBUG = -g
 
+# https://www.gnu.org/software/make/manual/html_node/File-Name-Functions.html
+DCFILES = $(wildcard *.d.c)
+# https://www.gnu.org/software/make/manual/html_node/Text-Functions.html#Text-Functions
+EXEFILES = $(DCFILES:.d.c=)
+
 # disable default suffixes
 .SUFFIXES:
 
@@ -23,3 +28,4 @@ clean:
 	rm -f *.d
 	rm -rf .DS_Store
 	rm -rf *.dSYM
+	rm -f $(EXEFILES)
