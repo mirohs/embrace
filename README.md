@@ -2,7 +2,7 @@
 
 ## Debraced C code.
 
-*Embrace* is a program to insert braces into de-braced C source code. De-braced
+*Embrace* is a program to insert braces into debraced C source code. Debraced
 C source code selectively has curly braces `{...}` removed in favor of
 indentation, similar to Python. This work is inspired by [optional braces in
 Scala
@@ -14,9 +14,10 @@ There is a nice [assessment of optional braces in Scala
 - "Writers stay in the flow, no need to go back and forth inserting braces."
 - "Program changes are more reliable than with braces."
 
-Debraced C must only use spaces for indentation, rather than tab characters. The
-number of spaces per level of indentation is up to the programmer, but the
-number of spaces for lines on the same indentation level must match.
+Indentation is significant in debraced C. Debraced C must only use spaces for
+indentation, rather than tab characters. The number of spaces per level of
+indentation is up to the programmer, but the number of spaces for lines on the
+same indentation level must match.
 
 *Embrace* re-inserts braces `{...}` in such a way that the line numbers do not
 change compared to the de-braced source code. Thus line numbers in compiler
