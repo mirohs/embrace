@@ -203,6 +203,14 @@ void parse_line(/*inout*/LineInfo* li) {
     assert("valid state", li->state == 0 || li->state == 4);
     li->indent = indentation(*line);
     li->preprocessor_line = (li->state == 0 && line->s[li->indent] == '#');
+    // check if '#' appears after public '*' marker
+    if (!li->preprocessor_line && li->state == 0 && line->s[li->indent] == '*') {
+        int i = li->indent + 1;
+        while (i < line->len && (line->s[i] == ' ' || line->s[i] == '\t')) i++;
+        if (i < line->len && line->s[i] == '#') {
+            li->preprocessor_line = true;
+        }
+    }
     li->end_marker = matches_token(*line, li->indent, token_end);
     li->line_comment_index = line->len;
     li->struct_or_union_token = false;
@@ -285,6 +293,7 @@ bool append_spaces(String* str, int n) {
     require_not_null(str);
     require("not negative", n >= 0);
     int new_len = str->len + n;
+    panic_if(new_len > str->cap, "append_spaces overflow");
     if (new_len > str->cap) return false;
     memset(str->s + str->len, ' ', n);
     str->len = new_len;
