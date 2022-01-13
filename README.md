@@ -20,8 +20,8 @@ indentation is up to the programmer, but the number of spaces for lines on the
 same indentation level must match.
 
 *Embrace* re-inserts braces `{...}` in such a way that the line numbers do not
-change compared to the de-braced source code. Thus line numbers in compiler
-error messages are the same as in the de-braced source code.
+change compared to the debraced source code. Thus line numbers in compiler
+error messages are the same as in the debraced source code.
 
 The embracing process is transparent to the programmer, because it can be
 embedded as a rule in the Makefile.
