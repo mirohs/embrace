@@ -198,11 +198,16 @@ Counts each opening brace as +1 and each closing brace as -1.
 void parse_line(/*inout*/LineInfo* li) {
     require_not_null(li);
     String* line = li->line;
+    // if previous line is a preprocessor line with a continuation,
+    // then this one is a preprocessor line as well, otherwise it is not
+    li->preprocessor_line = li->preprocessor_line && (li->state == 5);
     // reset state if previos line ended in a line continuation
     if (li->state == 5) li->state = 0;
     assert("valid state", li->state == 0 || li->state == 4);
     li->indent = indentation(*line);
-    li->preprocessor_line = (li->state == 0 && line->s[li->indent] == '#');
+    if (!li->preprocessor_line) {
+        li->preprocessor_line = (li->state == 0 && line->s[li->indent] == '#');
+    }
     // check if '#' appears after public '*' marker
     if (!li->preprocessor_line && li->state == 0 && line->s[li->indent] == '*') {
         int i = li->indent + 1;
