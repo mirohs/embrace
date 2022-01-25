@@ -1,0 +1,17 @@
+# http://astyle.sourceforge.net/astyle.html
+# astyle -A2 -s4 -S -p -xg -U -H -xe -k1 -j -xC100 -z2 -Z < foo.c | less
+# astyle --options=.astylerc < foo.c | less
+
+--style=java
+--indent=spaces=4
+--indent-switches
+--pad-oper
+--pad-comma
+--unpad-paren
+--pad-header
+--delete-empty-lines
+--align-pointer=type
+--add-braces
+--max-code-length=100
+--lineend=linux
+--preserve-date

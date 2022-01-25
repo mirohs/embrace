@@ -21,11 +21,15 @@ embrace: $(OBJECTS)
 %.o: %.c
 	gcc -c $(CFLAGS) $(DEBUG) $<
 
+# format the generated .c- and .h-files using
+# astyle --options=.astylerc
+# see .astylerc
+
 %.d: %.c
 	@echo "$@ \\" >$@; \
 	gcc -MM $(CFLAGS) $(DEBUG) $< >>$@
 
-include $(DEPENDENCIES)
+-include $(DEPENDENCIES)
 
 # do not treat "clean" as a file name
 .PHONY: clean 

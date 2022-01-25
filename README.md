@@ -194,7 +194,7 @@ The `Makefile` in the `examples`directory transparently invokes *embrace* to cre
 
 ```c
 #include <stdio.h>
-;
+
 int main(void) {
     int i = 0;
     do {
@@ -206,3 +206,20 @@ int main(void) {
 
 The unusual placement of braces ensures that line numbers do not change, which
 is important for compiler error messages.
+
+Tools like [astyle](http://astyle.sourceforge.net/astyle.html) may be used to
+convert this into your preferred style. For example, the `.astylerc` file in
+this project produces:
+
+```c
+#include <stdio.h>
+
+int main(void) {
+    int i = 0;
+    do {
+        printf("%d\n", i);
+        i++;
+    } while (i < 5);
+    return 0;
+}
+```
